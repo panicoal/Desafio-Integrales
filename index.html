@@ -1,0 +1,633 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Desafío Integración Numérica - La Paz</title>
+    <!-- Incluir Chart.js para las gráficas -->
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <style>
+        :root {
+            --primary: #2c3e50;
+            --secondary: #3498db;
+            --accent: #e74c3c;
+            --bg: #f4f7f6;
+            --card-bg: #ffffff;
+            --text: #333;
+        }
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            margin: 0;
+            background-color: var(--bg);
+            color: var(--text);
+        }
+        header {
+            background-color: var(--primary);
+            color: white;
+            padding: 1rem 2rem;
+            text-align: center;
+        }
+        .container {
+            display: flex;
+            max-width: 1300px;
+            margin: 20px auto;
+            gap: 20px;
+            padding: 0 20px;
+        }
+        /* Menú lateral de pestañas */
+        .tabs {
+            width: 250px;
+            display: flex;
+            flex-direction: column;
+            gap: 10px;
+        }
+        .tab-btn {
+            padding: 15px;
+            background-color: var(--card-bg);
+            border: 1px solid #ddd;
+            border-radius: 8px;
+            cursor: pointer;
+            text-align: left;
+            font-weight: bold;
+            font-size: 1em;
+            color: #333; /* CORREGIDO: Color visible en estado inactivo */
+            transition: all 0.3s;
+        }
+        .tab-btn:hover { background-color: #e0e0e0; }
+        .tab-btn.active {
+            background-color: var(--secondary);
+            color: white; /* CORREGIDO */
+            border-color: var(--secondary);
+        }
+        .tab-btn.summary-btn {
+            background-color: #f39c12;
+            color: white;
+            border-color: #f39c12;
+            text-align: center;
+            margin-top: 20px;
+        }
+        .tab-btn.summary-btn:hover { background-color: #e67e22; }
+        .tab-btn.summary-btn.active { background-color: #d35400; border-color: #d35400; }
+
+        /* Contenido principal */
+        .content {
+            flex: 1;
+            background-color: var(--card-bg);
+            padding: 20px;
+            border-radius: 8px;
+            box-shadow: 0 4px 6px rgba(0,0,0,0.1);
+            overflow-x: auto; /* Para tablas anchas */
+        }
+        h2 { margin-top: 0; color: var(--primary); }
+        .desc { font-size: 0.9em; color: #555; margin-bottom: 20px; }
+        .controls {
+            display: flex;
+            gap: 15px;
+            margin-bottom: 20px;
+            align-items: center;
+            flex-wrap: wrap;
+        }
+        select, button, input {
+            padding: 10px;
+            border-radius: 5px;
+            border: 1px solid #ccc;
+            font-size: 1em;
+        }
+        button {
+            background-color: var(--secondary);
+            color: white;
+            border: none;
+            cursor: pointer;
+            font-weight: bold;
+            transition: background 0.3s;
+        }
+        button:hover { background-color: #2980b9; }
+        .data-input {
+            width: 100%;
+            height: 100px;
+            margin-bottom: 15px;
+            font-family: monospace;
+            padding: 10px;
+            border: 1px solid #ccc;
+            border-radius: 5px;
+            box-sizing: border-box;
+        }
+        .results {
+            background-color: #e8f4f8;
+            padding: 15px;
+            border-radius: 8px;
+            border-left: 5px solid var(--secondary);
+            margin-bottom: 20px;
+        }
+        .results span { font-weight: bold; color: var(--accent); font-size: 1.2em; }
+        .conclusion-box {
+            background-color: #fff3cd;
+            padding: 15px;
+            border-radius: 8px;
+            border-left: 5px solid #ffc107;
+            margin-top: 20px;
+            font-size: 0.95em;
+        }
+        .chart-container {
+            width: 100%;
+            height: 300px;
+            margin-bottom: 20px;
+        }
+
+        /* Estilos de la Tabla Comparativa Final */
+        .table-responsive {
+            width: 100%;
+            overflow-x: auto;
+        }
+        .summary-table {
+            width: 100%;
+            border-collapse: collapse;
+            margin-top: 20px;
+            font-size: 0.85em;
+        }
+        .summary-table th, .summary-table td {
+            border: 1px solid #ddd;
+            padding: 8px;
+            text-align: center;
+        }
+        .summary-table th {
+            background-color: var(--primary);
+            color: white;
+        }
+        .summary-table tr:nth-child(even) { background-color: #f9f9f9; }
+        .summary-table tr:hover { background-color: #f1f1f1; }
+        .error-text { color: var(--accent); font-weight: bold; }
+    </style>
+</head>
+<body>
+
+<header>
+    <h1>Desafío de Integración Numérica</h1>
+    <p>Aplicación interactiva para resolución de problemas - La Paz, Bolivia</p>
+</header>
+
+<div class="container">
+    <!-- Pestañas laterales -->
+    <aside class="tabs" id="tabs-container">
+        <!-- Generado por JS -->
+    </aside>
+
+    <!-- Área de trabajo: Ejercicios Individuales -->
+    <main class="content" id="exercise-view">
+        <h2 id="ex-title">Cargando...</h2>
+        <div class="desc" id="ex-desc"></div>
+
+        <!-- Configuración de cálculo -->
+        <div class="controls">
+            <label>Método:
+                <select id="method-select">
+                    <option value="trapezoid">Trapecio Compuesto</option>
+                    <option value="simpson13">Simpson 1/3</option>
+                    <option value="simpson38">Simpson 3/8</option>
+                    <option value="combined">Simpson Combinado (1/3 + 3/8)</option>
+                </select>
+            </label>
+            <div id="dynamic-inputs"></div>
+            <button onclick="calcular()">Calcular Integración</button>
+        </div>
+
+        <!-- Área de datos si es tabulado -->
+        <div id="table-area">
+            <textarea id="data-input" class="data-input" placeholder="Ingrese datos x,y separados por coma..."></textarea>
+        </div>
+
+        <!-- Resultados y Gráfica -->
+        <div class="results" id="results-area" style="display:none;">
+            <h3>Resultados:</h3>
+            <p id="math-procedure"></p>
+            <h4>Resultado Final: <span id="final-result"></span></h4>
+            <p id="validation-msg"></p>
+        </div>
+
+        <div class="chart-container" id="chart-container" style="display:none;">
+            <canvas id="myChart"></canvas>
+        </div>
+
+        <!-- Conclusión del ejercicio -->
+        <div class="conclusion-box" id="ex-conclusion">
+            <!-- Generado por JS -->
+        </div>
+    </main>
+
+    <!-- Área de trabajo: Resumen General (Oculto por defecto) -->
+    <main class="content" id="summary-view" style="display: none;">
+        <h2>Tabla Comparativa General</h2>
+        <p class="desc">Comparación de resultados por método. El error absoluto se calcula respecto al valor más preciso disponible (analítico o Simpson correspondiente).</p>
+
+        <div class="table-responsive">
+            <table class="summary-table" id="summary-table">
+                <thead>
+                    <tr>
+                        <th>Ejercicio</th>
+                        <th>Var. (t/x)</th>
+                        <th>n</th>
+                        <th>h</th>
+                        <th>Trapecio Comp.</th>
+                        <th>Simpson 1/3</th>
+                        <th>Simpson 3/8</th>
+                        <th>Error Abs. (vs Ref)</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <!-- Generado por JS -->
+                </tbody>
+            </table>
+        </div>
+
+        <div class="conclusion-box" style="margin-top: 30px;">
+            <strong>Conclusión General del Desafío:</strong> La integración numérica es fundamental cuando las funciones son complejas o los datos son discretos. Los métodos de Simpson (1/3 y 3/8) ofrecen mayor precisión (menor error) para curvas suaves en comparación con el Trapecio, pero requieren condiciones específicas en el número de subintervalos (n par o múltiplo de 3). El error absoluto demuestra que, a mayor orden del método, mejor es la aproximación al valor real.
+        </div>
+    </main>
+</div>
+
+<script>
+// DEFINICIÓN DE LOS EJERCICIOS Y VALORES DE REFERENCIA (Si existen)
+const ejercicios = {
+    19: {
+        title: "Ejercicio 19: Distancia de un vehículo",
+        varName: "t (s)",
+        desc: "Estimar la distancia recorrida integrando v(t). Convertir segundos a horas.",
+        type: "table",
+        defaultData: "x: 0,1,2,3,4,5,6,7\ny: 0,14,39,69,95,114,129,139",
+        unit: "millas (mi)",
+        factor: 1/3600,
+        refValue: 0.147072, // Referencia combinada del doc
+        conclusion: "El método de Simpson 1/3 suele ser más preciso que el trapecio para curvas suaves de aceleración. La distancia estimada es pequeña pero consistente."
+    },
+    20: {
+        title: "Ejercicio 20: Trabajo de banda elástica",
+        varName: "x (in)",
+        desc: "Calcular el trabajo de la fuerza integrando F(x) respecto al desplazamiento.",
+        type: "table",
+        defaultData: "x: 0,0.4,0.8,1.2,1.6,2.0,2.4,2.8\ny: 0,0.85,1.30,1.60,1.87,2.14,2.34,2.52",
+        unit: "lb·in",
+        factor: 1,
+        refValue: 4.577167, // Referencia combinada del doc
+        conclusion: "Al integrar una curva cóncava (fuerza vs desplazamiento), el método del Trapecio tiende a sobreestimar el área, mientras que Simpson ofrece una mejor aproximación al trabajo real."
+    },
+    21: {
+        title: "Ejercicio 21: Área de un perfil topográfico",
+        varName: "x",
+        desc: "Estimar el área bajo la curva digitalizada entre x=1 y x=10.",
+        type: "table",
+        defaultData: "x: 1,2,3,4,5,6,7,8,9,10\ny: 1.3,3.7,4.6,4.4,2.7,2.5,3.6,5.3,6.0,5.9",
+        unit: "u²",
+        factor: 1,
+        refValue: 36.6, // Usamos Simpson 3/8 como ref
+        conclusion: "La precisión aquí depende fuertemente de la digitalización. Con 9 subintervalos, Simpson 3/8 es aplicable y ofrece una estimación robusta."
+    },
+    22: {
+        title: "Ejercicio 22: Longitud de un cable (Catenaria)",
+        varName: "x (ft)",
+        desc: "y = 24*cosh(x/24). Longitud entre x=-12 y x=26.",
+        type: "function",
+        func: (x) => Math.cosh(x/24),
+        a: -12,
+        b: 26,
+        defaultN: 8,
+        unit: "ft",
+        factor: 1,
+        refValue: 43.898841, // Valor exacto analítico
+        conclusion: "La integral de longitud de arco se simplifica a cosh(x/a). Simpson converge extremadamente rápido al valor analítico exacto."
+    },
+    23: {
+        title: "Ejercicio 23: Caudal de tubería",
+        varName: "r (in)",
+        desc: "Q = ∫ 2πr * 80(1 - r/0.25)^(1/7) dr, desde 0 hasta 0.25.",
+        type: "function",
+        func: (r) => 2 * Math.PI * r * 80 * Math.pow(1 - (r/0.25), 1/7),
+        a: 0,
+        b: 0.25,
+        defaultN: 8,
+        unit: "in³/s",
+        factor: 1,
+        refValue: 12.828170, // Valor exacto analítico
+        conclusion: "El perfil turbulento (ley 1/7) tiene derivada infinita en la pared. Los métodos numéricos simples requieren mayor n para converger."
+    },
+    24: {
+        title: "Ejercicio 24: Longitud de una cardioide",
+        varName: "t (rad)",
+        desc: "Longitud de x=10cos(t)-5cos(2t), y=10sin(t)-5sin(2t) en [0, 2π].",
+        type: "function",
+        func: (t) => 20 * Math.sin(t/2),
+        a: 0,
+        b: 2 * Math.PI,
+        defaultN: 8,
+        unit: "u",
+        factor: 1,
+        refValue: 80, // Valor exacto analítico
+        conclusion: "La cardioide presenta simetría. Simpson 1/3 se aproxima casi perfectamente al valor teórico de 80."
+    },
+    25: {
+        title: "Ejercicio 25: Energía potencial",
+        varName: "y (m)",
+        desc: "ΔU = ∫ 500*9.81*(R²/(R+y)²) dy, desde 0 hasta 800000.",
+        type: "function",
+        func: (y) => 500 * 9.81 * (6371000**2) / ((6371000 + y)**2),
+        a: 0,
+        b: 800000,
+        defaultN: 8,
+        unit: "J",
+        factor: 1,
+        refValue: 3486236787, // Analítico
+        conclusion: "Se evidencia la variación de g(y). El resultado difiere del cálculo simplificado m*g*h."
+    },
+    26: {
+        title: "Ejercicio 26: Área Lago Erie",
+        varName: "x (mi)",
+        desc: "Aproximar el área. Anchos aproximados cada 20 millas.",
+        type: "table",
+        defaultData: "x: 40,60,80,100,120,140,160,180,200,220,240,260\ny: 15,25,40,55,65,70,65,55,45,30,20,10",
+        unit: "mi²",
+        factor: 1,
+        refValue: 9940, // Área real según documento
+        conclusion: "El área real es 9,940 mi². El trapecio es útil para contornos irregulares, pero el muestreo cada 20 millas genera error."
+    },
+    27: {
+        title: "Ejercicio 27: Volumen de un balón",
+        varName: "z (in)",
+        desc: "V = π∫r²dz. Aprox. de volumen con r = d/2.",
+        type: "table",
+        defaultData: "x: 0,1,2,3,4,5,6,7,8,9,10,11,12\ny: 0,2.6,3.2,4.8,5.6,6.0,6.2,6.0,5.6,4.8,3.3,2.6,0",
+        unit: "in³",
+        factor: 1,
+        isVolume: true,
+        refValue: 201.842092, // Usamos Simpson 1/3 como referencia
+        conclusion: "La integración de discos (πr²) es exacta. Simpson 1/3 y 3/8 son aplicables aquí ya que n=12 es par y múltiplo de 3."
+    }
+};
+
+let currentEx = 19;
+let myChartInstance = null;
+
+// INICIALIZACIÓN
+function init() {
+    const tabsContainer = document.getElementById('tabs-container');
+    Object.keys(ejercicios).forEach(key => {
+        const btn = document.createElement('button');
+        btn.className = 'tab-btn';
+        btn.innerText = `Ejercicio ${key}`;
+        btn.onclick = () => loadExercise(parseInt(key));
+        tabsContainer.appendChild(btn);
+    });
+
+    // Botón de Resumen General
+    const summaryBtn = document.createElement('button');
+    summaryBtn.className = 'tab-btn summary-btn';
+    summaryBtn.innerText = '📊 Resumen General';
+    summaryBtn.onclick = () => showSummary();
+    tabsContainer.appendChild(summaryBtn);
+
+    loadExercise(19);
+}
+
+function loadExercise(id) {
+    currentEx = id;
+    const ex = ejercicios[id];
+
+    document.getElementById('exercise-view').style.display = 'block';
+    document.getElementById('summary-view').style.display = 'none';
+
+    // Actualizar clases activas
+    const btns = document.querySelectorAll('.tab-btn');
+    btns.forEach(b => b.classList.remove('active'));
+    btns[Object.keys(ejercicios).indexOf(id.toString())].classList.add('active');
+
+    document.getElementById('ex-title').innerText = ex.title;
+    document.getElementById('ex-desc').innerText = ex.desc;
+    document.getElementById('ex-conclusion').innerHTML = `<strong>Conclusión del Ejercicio ${id}:</strong> ${ex.conclusion}`;
+
+    document.getElementById('results-area').style.display = 'none';
+    document.getElementById('chart-container').style.display = 'none';
+    document.getElementById('dynamic-inputs').innerHTML = '';
+
+    if (ex.type === 'table') {
+        document.getElementById('table-area').style.display = 'block';
+        document.getElementById('data-input').value = ex.defaultData;
+    } else {
+        document.getElementById('table-area').style.display = 'none';
+        document.getElementById('dynamic-inputs').innerHTML = `
+            <label>a: <input type="number" id="inp-a" value="${ex.a}" style="width:80px;"></label>
+            <label>b: <input type="number" id="inp-b" value="${ex.b}" style="width:80px;"></label>
+            <label>n: <input type="number" id="inp-n" value="${ex.defaultN}" style="width:60px;"></label>
+        `;
+    }
+}
+
+function showSummary() {
+    document.getElementById('exercise-view').style.display = 'none';
+    document.getElementById('summary-view').style.display = 'block';
+
+    const btns = document.querySelectorAll('.tab-btn');
+    btns.forEach(b => b.classList.remove('active'));
+    document.querySelector('.summary-btn').classList.add('active');
+
+    generateSummaryTable();
+}
+
+// LÓGICA DE CÁLCULO GENERAL
+function calculateMethod(x, y, method) {
+    const n = x.length - 1;
+    const h = (x[n] - x[0]) / n;
+    let integral = 0;
+
+    if (method === 'trapezoid') {
+        integral = y[0] + y[n];
+        for (let i = 1; i < n; i++) integral += 2 * y[i];
+        integral *= (h / 2);
+    }
+    else if (method === 'simpson13') {
+        if (n % 2 !== 0) return null;
+        integral = y[0] + y[n];
+        for (let i = 1; i < n; i++) {
+            integral += (i % 2 === 0) ? 2 * y[i] : 4 * y[i];
+        }
+        integral *= (h / 3);
+    }
+    else if (method === 'simpson38') {
+        if (n % 3 !== 0) return null;
+        integral = y[0] + y[n];
+        for (let i = 1; i < n; i++) {
+            integral += (i % 3 === 0) ? 2 * y[i] : 3 * y[i];
+        }
+        integral *= (3 * h / 8);
+    }
+    else if (method === 'combined') {
+        if (n < 5) return null;
+        // Implementación genérica combinada (solo si n=7 exacto para este desafío)
+        if (n === 7) {
+            let s13 = (y[0] + y[4] + 4*(y[1]+y[3]) + 2*y[2]) * (h/3);
+            let s38 = (y[4] + y[7] + 3*(y[5]+y[6])) * (3*h/8);
+            integral = s13 + s38;
+        } else return null;
+    }
+    return integral;
+}
+
+function calcular() {
+    const ex = ejercicios[currentEx];
+    const method = document.getElementById('method-select').value;
+    let x = [], y = [];
+
+    if (ex.type === 'table') {
+        const rawData = document.getElementById('data-input').value;
+        try {
+            const lines = rawData.split('\n');
+            x = lines[0].replace('x:', '').split(',').map(Number);
+            y = lines[1].replace('y:', '').split(',').map(Number);
+        } catch (e) {
+            return alert("Error en los datos tabulados.");
+        }
+    } else {
+        const a = parseFloat(document.getElementById('inp-a').value);
+        const b = parseFloat(document.getElementById('inp-b').value);
+        const n = parseInt(document.getElementById('inp-n').value);
+
+        if (method === 'simpson13' && n % 2 !== 0) return alert("Simpson 1/3 requiere n par.");
+        if (method === 'simpson38' && n % 3 !== 0) return alert("Simpson 3/8 requiere n múltiplo de 3.");
+
+        const h = (b - a) / n;
+        for (let i = 0; i <= n; i++) {
+            const xi = a + i * h;
+            x.push(xi);
+            y.push(ex.func(xi));
+        }
+    }
+
+    if (ex.isVolume) {
+        y = y.map(d => Math.PI * Math.pow(d / 2, 2));
+    }
+
+    const n = x.length - 1;
+    const h = (x[n] - x[0]) / n;
+
+    if (method === 'simpson13' && n % 2 !== 0) return alert("Datos: Simpson 1/3 requiere n par.");
+    if (method === 'simpson38' && n % 3 !== 0) return alert("Datos: Simpson 3/8 requiere n múltiplo de 3.");
+
+    const rawIntegral = calculateMethod(x, y, method);
+    if (rawIntegral === null) return alert("Método no aplicable para este número de intervalos (n).");
+
+    const resultadoFinal = rawIntegral * ex.factor;
+
+    document.getElementById('results-area').style.display = 'block';
+    document.getElementById('math-procedure').innerHTML = `Intervalos (n) = ${n} | Tamaño de paso (h) = ${h.toFixed(6)}`;
+    document.getElementById('final-result').innerText = `${resultadoFinal.toFixed(6)} ${ex.unit}`;
+
+    drawChart(x, y);
+}
+
+// TABLA COMPARATIVA FINAL
+function generateSummaryTable() {
+    const tbody = document.querySelector('#summary-table tbody');
+    tbody.innerHTML = ''; // Limpiar
+
+    Object.keys(ejercicios).forEach(key => {
+        const ex = ejercicios[key];
+        let x = [], y = [];
+
+        // 1. Obtener datos
+        if (ex.type === 'table') {
+            const lines = ex.defaultData.split('\n');
+            x = lines[0].replace('x:', '').split(',').map(Number);
+            y = lines[1].replace('y:', '').split(',').map(Number);
+        } else {
+            const n = ex.defaultN;
+            const h = (ex.b - ex.a) / n;
+            for (let i = 0; i <= n; i++) {
+                const xi = ex.a + i * h;
+                x.push(xi);
+                y.push(ex.func(xi));
+            }
+        }
+
+        if (ex.isVolume) y = y.map(d => Math.PI * Math.pow(d / 2, 2));
+
+        const n = x.length - 1;
+        const h = (x[n] - x[0]) / n;
+
+        // 2. Calcular métodos
+        let trap = calculateMethod(x, y, 'trapezoid');
+        let s13 = calculateMethod(x, y, 'simpson13');
+        let s38 = calculateMethod(x, y, 'simpson38');
+
+        // Aplicar factores de conversión
+        if(trap !== null) trap *= ex.factor;
+        if(s13 !== null) s13 *= ex.factor;
+        if(s38 !== null) s38 *= ex.factor;
+
+        // 3. Determinar mejor valor para Error Absoluto
+        let bestVal = ex.refValue;
+        if (!bestVal) {
+            bestVal = s13 !== null ? s13 : (s38 !== null ? s38 : trap);
+        }
+
+        // 4. Crear fila
+        const tr = document.createElement('tr');
+
+        // Función auxiliar para formatear
+        const fmt = (val) => {
+            if (val === null) return '<span style="color:#aaa;">N/A</span>';
+            if (Math.abs(val) > 100000) return val.toExponential(4);
+            return val.toFixed(4);
+        };
+
+        const fmtErr = (val) => {
+            if (val === null) return 'N/A';
+            const err = Math.abs(val - bestVal);
+            if (err === 0) return '0';
+            if (err < 0.0001) return err.toExponential(2);
+            return err.toFixed(4);
+        };
+
+        tr.innerHTML = `
+            <td>Ej. ${key}</td>
+            <td>${ex.varName}</td>
+            <td>${n}</td>
+            <td>${h.toFixed(4)}</td>
+            <td>${fmt(trap)}</td>
+            <td>${fmt(s13)}</td>
+            <td>${fmt(s38)}</td>
+            <td class="error-text">${fmtErr(trap)} (Trap) <br> ${fmtErr(s13)} (S1/3)</td>
+        `;
+        tbody.appendChild(tr);
+    });
+}
+
+// GRÁFICA CON CHART.JS
+function drawChart(x, y) {
+    document.getElementById('chart-container').style.display = 'block';
+    const ctx = document.getElementById('myChart').getContext('2d');
+    if (myChartInstance) myChartInstance.destroy();
+
+    myChartInstance = new Chart(ctx, {
+        type: 'line',
+        data: {
+            labels: x.map(val => val.toFixed(2)),
+            datasets: [{
+                label: 'Datos / f(x)',
+                data: y,
+                borderColor: '#3498db',
+                backgroundColor: 'rgba(52, 152, 219, 0.2)',
+                fill: true,
+                tension: 0.1,
+                pointRadius: 4,
+                pointBackgroundColor: '#e74c3c'
+            }]
+        },
+        options: {
+            responsive: true,
+            maintainAspectRatio: false,
+            plugins: { legend: { display: false } }
+        }
+    });
+}
+
+window.onload = init;
+</script>
+</body>
+</html>
